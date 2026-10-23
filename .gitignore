@@ -1,0 +1,15 @@
+# NetBeans IDE runtime cache and private user settings
+nbproject/private/
+build/
+dist/
+nbbuild/
+dist/
+*.class
+
+# Operating System temporary files
+.DS_Store
+Thumbs.db
+*.log
+
+# Sensitive environment configs
+*.env

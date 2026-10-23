@@ -1,6 +1,7 @@
 package com.healthfirst.pims.ui;
 
 import com.healthfirst.pims.dao.MedicineDAO;
+import com.healthfirst.pims.dao.SaleDAO;
 import com.healthfirst.pims.model.CartItem;
 import com.healthfirst.pims.model.Medicine;
 import com.healthfirst.pims.model.User;
@@ -12,16 +13,11 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.Insets;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -33,19 +29,21 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.table.DefaultTableModel;
+import java.util.Locale;
 
 public class CashierDashboard extends JFrame {
 
     private final MedicineDAO medicineDAO = new MedicineDAO();
+    private final SaleDAO saleDAO = new SaleDAO();
     private final List<CartItem> cartItems = new ArrayList<>();
 
-    // Stock Table Components
+    // Stock Lookup Components
     private JTextField txtSearch;
     private JTable tblMedicines;
     private DefaultTableModel modelMedicines;
     private JSpinner spinQuantity;
 
-    // Cart Table Components
+    // Cart Components
     private JTable tblCart;
     private DefaultTableModel modelCart;
     private JLabel lblSubtotalVal;
@@ -117,11 +115,11 @@ public class CashierDashboard extends JFrame {
         txtSearch = new JTextField();
         txtSearch.setFont(UITheme.FONT_BODY);
         txtSearch.setBorder(UITheme.BORDER_INPUT);
-        txtSearch.setToolTipText("Search medicine by name or manufacturer...");
+        txtSearch.setToolTipText("Search medicine by name or company...");
 
         ActionButton btnSearch = ActionButton.primary("Search");
         btnSearch.setPreferredSize(new Dimension(90, 35));
-        btnSearch.addActionListener(e -> loadMedicineData(txtSearch.getText()));
+        btnSearch.addActionListener(e -> loadMedicineData(txtSearch.getText().trim()));
 
         ActionButton btnReset = ActionButton.secondary("Reset");
         btnReset.setPreferredSize(new Dimension(80, 35));
@@ -205,7 +203,7 @@ public class CashierDashboard extends JFrame {
         btnRemove.setPreferredSize(new Dimension(140, 32));
         btnRemove.addActionListener(e -> handleRemoveSelectedItem());
 
-        ActionButton btnClear = ActionButton.danger("Clear Cart"); // Clear cart requirement[cite: 5]
+        ActionButton btnClear = ActionButton.danger("Clear Cart");
         btnClear.setPreferredSize(new Dimension(110, 32));
         btnClear.addActionListener(e -> handleClearCart());
 
@@ -219,12 +217,12 @@ public class CashierDashboard extends JFrame {
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
 
-        JLabel lblSub = new JLabel("Subtotal:");
+        JLabel lblSub = new JLabel("Subtotal (Excl. VAT):");
         lblSub.setFont(UITheme.FONT_BODY);
         lblSubtotalVal = new JLabel("R 0.00");
         lblSubtotalVal.setFont(UITheme.FONT_BODY_BOLD);
 
-        JLabel lblTax = new JLabel("VAT (15% included):");
+        JLabel lblTax = new JLabel("VAT (15%):");
         lblTax.setFont(UITheme.FONT_BODY);
         lblTaxVal = new JLabel("R 0.00");
         lblTaxVal.setFont(UITheme.FONT_BODY_BOLD);
@@ -237,16 +235,7 @@ public class CashierDashboard extends JFrame {
 
         ActionButton btnCheckout = ActionButton.primary("Proceed to Checkout");
         btnCheckout.setPreferredSize(new Dimension(0, 40));
-        btnCheckout.addActionListener(e -> {
-            if (cartItems.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "The cart is empty. Add items before proceeding.", 
-                                              "Empty Cart", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            JOptionPane.showMessageDialog(this, 
-                "Cart verified with " + cartItems.size() + " items.\nReady for Commit 6 transaction execution.", 
-                "Checkout Staging", JOptionPane.INFORMATION_MESSAGE);
-        });
+        btnCheckout.addActionListener(e -> handleCheckout());
 
         summaryCard.add(lblSub);
         summaryCard.add(lblSubtotalVal);
@@ -280,7 +269,7 @@ public class CashierDashboard extends JFrame {
                     m.getMedicineId(),
                     m.getName(),
                     m.getMedicineType(),
-                    String.format("%.2f", m.getPrice()),
+                    String.format(Locale.US,"%.2f", m.getPrice()),
                     m.getQuantityInStock(),
                     m.getExpiryDate().toString()
                 });
@@ -301,11 +290,11 @@ public class CashierDashboard extends JFrame {
 
         int medicineId = (int) modelMedicines.getValueAt(selectedRow, 0);
         String name = (String) modelMedicines.getValueAt(selectedRow, 1);
-        double price = Double.parseDouble((String) modelMedicines.getValueAt(selectedRow, 3));
+        String priceRaw = modelMedicines.getValueAt(selectedRow, 3).toString().replace(",", ".").trim();
+        double price = Double.parseDouble(priceRaw);
         int availableStock = (int) modelMedicines.getValueAt(selectedRow, 4);
         int qtyRequested = (int) spinQuantity.getValue();
 
-        // Calculate quantity already in cart
         int existingInCart = 0;
         for (CartItem ci : cartItems) {
             if (ci.getMedicineId() == medicineId) {
@@ -321,7 +310,6 @@ public class CashierDashboard extends JFrame {
             return;
         }
 
-        // Add or update cart item
         boolean found = false;
         for (CartItem ci : cartItems) {
             if (ci.getMedicineId() == medicineId) {
@@ -362,6 +350,50 @@ public class CashierDashboard extends JFrame {
         }
     }
 
+    private void handleCheckout() {
+        if (cartItems.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "The cart is empty. Add medicines prior to checkout.", 
+                                          "Empty Cart", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        User currentUser = SessionManager.getCurrentUser();
+        int userId = (currentUser != null) ? currentUser.getUserId() : 1;
+        String cashierName = (currentUser != null) ? currentUser.getFullName() : "Cashier";
+
+        double totalAmount = 0.0;
+        for (CartItem ci : cartItems) {
+            totalAmount += ci.getSubtotal();
+        }
+
+        int confirmation = JOptionPane.showConfirmDialog(
+                this,
+                String.format("Finalize order for R %.2f (%d item types)?", totalAmount, cartItems.size()),
+                "Confirm Checkout",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+
+        if (confirmation != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            int generatedSaleId = saleDAO.processSale(userId, totalAmount, cartItems);
+
+            BillDialog billDialog = new BillDialog(this, generatedSaleId, cashierName, new ArrayList<>(cartItems), totalAmount);
+            billDialog.setVisible(true);
+
+            cartItems.clear();
+            refreshCartUI();
+            loadMedicineData(txtSearch.getText().trim());
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Checkout transaction failed: " + ex.getMessage(), 
+                                          "Transaction Aborted", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void refreshCartUI() {
         modelCart.setRowCount(0);
         double subtotal = 0.0;
@@ -378,11 +410,11 @@ public class CashierDashboard extends JFrame {
         }
 
         double vat = subtotal * 0.15;
-        double grandTotal = subtotal;
+        double net = subtotal - vat;
 
-        lblSubtotalVal.setText(String.format("R %.2f", (subtotal - vat)));
+        lblSubtotalVal.setText(String.format("R %.2f", net));
         lblTaxVal.setText(String.format("R %.2f", vat));
-        lblTotalVal.setText(String.format("R %.2f", grandTotal));
+        lblTotalVal.setText(String.format("R %.2f", subtotal));
     }
 
     private void handleLogout() {

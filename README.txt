@@ -57,3 +57,5 @@ Option B: Using the Standalone Executable
 8. 08_Report_LowStock.png - Low stock warning report with supplier contacts
 9. 09_Report_Expiry.png - Medicines expiring within the 30-day window
 ================================================================================
+
+GITHUB Repository: https://github.com/Buttermonkey1442/HealthFirst-PIMS

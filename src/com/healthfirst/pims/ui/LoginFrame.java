@@ -27,9 +27,6 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-/**
- * Clinical login frame with role validation and input error feedback.
- */
 public class LoginFrame extends JFrame {
 
     private JTextField txtUsername;
@@ -179,15 +176,15 @@ public class LoginFrame extends JFrame {
                     JOptionPane.showMessageDialog(this, 
                         "Welcome, " + authenticatedUser.getFullName() + " (Role: Administrator)", 
                         "Authentication Successful", JOptionPane.INFORMATION_MESSAGE);
-                    // Commit 7 & 8 will replace this with AdminDashboard frame
+                    
                 } else if (authenticatedUser.isCashier()) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Welcome, " + authenticatedUser.getFullName() + " (Role: Cashier)", 
-                        "Authentication Successful", JOptionPane.INFORMATION_MESSAGE);
-                    // Commit 5 will replace this with CashierDashboard frame
+                    CashierDashboard cashierDashboard = new CashierDashboard();
+                    cashierDashboard.setVisible(true);
+                    this.dispose();
+                    
                 }
                 
-                this.dispose(); // Close login window after routing
+                this.dispose();
             } else {
                 lblError.setText("Invalid username or password. Please try again.");
                 txtPassword.setText("");

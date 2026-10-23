@@ -2,6 +2,7 @@ package com.healthfirst.pims.ui;
 
 import com.healthfirst.pims.dao.UserDAO;
 import com.healthfirst.pims.model.User;
+import com.healthfirst.pims.ui.admin.AdminDashboard;
 import com.healthfirst.pims.ui.components.ActionButton;
 import com.healthfirst.pims.ui.components.RoundedPanel;
 import com.healthfirst.pims.ui.theme.UITheme;
@@ -173,9 +174,9 @@ public class LoginFrame extends JFrame {
 
                 // Role-based view routing
                 if (authenticatedUser.isAdmin()) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Welcome, " + authenticatedUser.getFullName() + " (Role: Administrator)", 
-                        "Authentication Successful", JOptionPane.INFORMATION_MESSAGE);
+                    AdminDashboard adminDashboard = new AdminDashboard();
+                    adminDashboard.setVisible(true);
+                    this.dispose();
                     
                 } else if (authenticatedUser.isCashier()) {
                     CashierDashboard cashierDashboard = new CashierDashboard();

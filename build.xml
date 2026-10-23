@@ -70,4 +70,18 @@
     nbproject/build-impl.xml file. 
 
     -->
+    
+    <target name="package-all-in-one" depends="jar">
+        <property name="all-in-one.jar" value="${dist.dir}/HealthFirst_PIMS_AllInOne.jar"/>
+        <delete file="${all-in-one.jar}"/>
+        <jar destfile="${all-in-one.jar}" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="com.healthfirst.pims.Main"/>
+            </manifest>
+            <!-- Merge project compiled classes -->
+            <zipfileset src="${dist.jar}"/>
+            <!-- Merge MySQL JDBC Connector into the single archive -->
+            <zipgroupfileset dir="${dist.dir}/lib" includes="*.jar"/>
+        </jar>
+    </target>
 </project>

@@ -45,7 +45,8 @@ public class AdminDashboard extends JFrame {
         // Required Tabs
         tabbedPane.addTab("Manage Medicines", new MedicinePanel()); 
         tabbedPane.addTab("Manage Suppliers", new SupplierPanel());     
-        tabbedPane.addTab("Manage Users", new UserManagementPanel());   
+        tabbedPane.addTab("Manage Users", new UserManagementPanel());
+        tabbedPane.addTab("Reports & Analytics", new ReportsPanel());
 
         add(tabbedPane, BorderLayout.CENTER);
     }
